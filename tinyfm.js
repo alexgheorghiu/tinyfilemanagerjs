@@ -13,6 +13,7 @@ delete
 
 // import os from 'node:os';
 
+const start_path = __dirname;
 let currentPath = null;
 
 
@@ -23,8 +24,14 @@ const os = require('node:os');
 
 const getDirectories = source => 
     fs.readdirSync(source, {withFileTypes: true})
-    .filter(direntry => direntry.isDirectory)
+    .filter(direntry => direntry.isDirectory())
     .map(direntry => direntry.name)
+    .sort((a,b) => -a.localeCompare(b));
+
+const getFiles = source => 
+fs.readdirSync(source, {withFileTypes: true})
+.filter(direntry => direntry.isFile())
+.map(direntry => direntry.name)
 
 http.createServer(function (req, res) {
     console.log('URL is:' + req.url)
@@ -71,12 +78,35 @@ function ls(req, res){
     }
 
     currentPath = path;
-    
+
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write(`<h1>${path}</h1>`)
+
+    //display current path
+    res.write(`<div>Current path: ${currentPath}</div>`)
+    res.write(`<hr/>`)
+
+    //display directories    
     let dirs  = getDirectories(path);
+    dirs.unshift('..');
     for(const dir in dirs){
-        res.write('<div>' + dirs[dir] + '</div>');
+        let fullFolderPath = encodeURIComponent(currentPath + '/' + dirs[dir]);
+        res.write('<div class="folder">[' 
+            + `<a href="/ls?path=${fullFolderPath}">`
+            + dirs[dir] 
+            + '</a>'
+            + ']</div>');
     }
+
+    //display files
+    let files  = getFiles(path);
+    for(const file in files){
+        res.write('<div>' + files[file] + '</div>');
+    }
+
+    //display stats
+    res.write('<hr/>');
+    res.write(`<div>${start_path}</div>`);
+
     res.end();
 }
