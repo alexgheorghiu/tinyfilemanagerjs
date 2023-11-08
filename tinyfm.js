@@ -4,11 +4,15 @@
 
 /**
 cd 
-ls
+ls    
 mkdir
 rename
 upload 
 delete  
+*/
+
+/*
+TODO: limit navigation only to the initial folder (no escape through ..)
 */
 
 // import os from 'node:os';
@@ -21,6 +25,7 @@ var http = require('http');
 var url = require('url');
 var fs = require('fs');
 const os = require('node:os'); 
+var path = require('path');
 
 const getDirectories = source => 
     fs.readdirSync(source, {withFileTypes: true})
@@ -29,9 +34,18 @@ const getDirectories = source =>
     .sort((a,b) => -a.localeCompare(b));
 
 const getFiles = source => 
-fs.readdirSync(source, {withFileTypes: true})
-.filter(direntry => direntry.isFile())
-.map(direntry => direntry.name)
+    fs.readdirSync(source, {withFileTypes: true})
+    .filter(direntry => direntry.isFile())
+    .map(direntry => direntry.name)
+
+const getParent = (filename, onlyName = false)=>{
+    if(onlyName){
+        return path.dirname(filename).split(path.sep).pop()
+    }
+    else {
+        return path.resolve(filename, '..')
+    }
+}
 
 http.createServer(function (req, res) {
     console.log('URL is:' + req.url)
@@ -44,6 +58,9 @@ http.createServer(function (req, res) {
     else if(q.pathname == '/ls'){
         ls(req, res);
     }
+    else {
+        welcome(req, res);
+    }
     //res.writeHead(200, { 'Content-Type': 'text/html' });
     //var q = url.parse(req.url, true).query;
     //res.write(q);
@@ -51,6 +68,14 @@ http.createServer(function (req, res) {
     // res.end(txt);
     //res.end();
 }).listen(8080);
+
+function welcome(req, res){
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write('<h1>Welcome</h1>')
+    res.write('This is a tiny web interface into a folder');
+
+    res.end();
+}
 
 function info(req, res){
     res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -77,7 +102,8 @@ function ls(req, res){
         path = q.path;
     }
 
-    currentPath = path;
+    let previousPath = currentPath;
+    currentPath = path;    
 
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write(`<h1>${path}</h1>`)
@@ -89,10 +115,18 @@ function ls(req, res){
     //display directories    
     let dirs  = getDirectories(path);
     dirs.unshift('..');
-    for(const dir in dirs){
-        let fullFolderPath = encodeURIComponent(currentPath + '/' + dirs[dir]);
+    for(const dir in dirs){  
+        let newPath;
+        if(dirs[dir] == '..'){
+            newPath = getParent(currentPath);
+        }
+        else{
+            newPath = currentPath + '/' + dirs[dir]
+        }
+        let fullFolderPath = encodeURIComponent(newPath);
+        let link =  '/ls' + (newPath == '' ? '' : `?path=${fullFolderPath}`) 
         res.write('<div class="folder">[' 
-            + `<a href="/ls?path=${fullFolderPath}">`
+            + `<a href="${link}">`
             + dirs[dir] 
             + '</a>'
             + ']</div>');
