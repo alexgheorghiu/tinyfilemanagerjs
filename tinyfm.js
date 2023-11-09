@@ -8,7 +8,7 @@ ls [v]
 mkdir [v]
 rename
 upload 
-delete  
+delete [v]
 */
 
 /*
@@ -58,6 +58,11 @@ const getParent = (filename, onlyName = false)=>{
 //@see https://stackoverflow.com/questions/10348906/how-to-know-if-a-request-is-http-or-https-in-node-js
 const isHTTPs = (req) => 'encrypted' in req.connection
 
+function error(req, res, mesg){
+    res.writeHead(400, { 'Content-Type': 'text/html' });
+    res.write(`${mesg}`);
+    res.end();
+}
 
 http.createServer(function (req, res) {
     console.log('URL is:' + req.url)
@@ -74,6 +79,9 @@ http.createServer(function (req, res) {
     }
     else if(q.pathname == '/mkdir'){
         mkdir(req, res);
+    }
+    else if(q.pathname == '/rm'){
+        rm(req, res);
     }
     else if(extension in mime_map){
         download_file(req, res);
@@ -207,13 +215,16 @@ function ls(req, res){
         }
         
         let new_rel_path_enc = encodeURIComponent(new_rel_path);
-        let link =  '/ls' + (new_rel_path_enc == '' ? '' : `?path=${new_rel_path_enc}`) 
+        let visit_link =  '/ls' + (new_rel_path_enc == '' ? '' : `?path=${new_rel_path_enc}`) 
+        let delete_link =  `/rm?parentFolder=${rel_path}&forDeleteFile=${encodeURIComponent(dirs[dir])}`;
+        
         res.write('<div class="folder_line">');
         res.write('<img src="./folder.png">');
         res.write('<span class="folder">'             
-            + `<a href="${link}">`
-            + dirs[dir] 
-            + '</a>'
+            + `<a href="${visit_link}">` + dirs[dir] + '</a>'
+            + '</span>');
+        res.write('<span class="delete">'             
+            + `<a href="${delete_link}"> [delete]</a>`
             + '</span>');
         res.write('</div>');
     }
@@ -277,8 +288,51 @@ function mkdir(req, res){
     }).end();
 }
 
-function error(req, res, mesg){
-    res.writeHead(400, { 'Content-Type': 'text/html' });
-    res.write(`${mesg}`);
-    res.end();
+function rm(req, res){
+    let rel_parent_folder = '';
+    let forDeleteFile = '';
+    let p  = url.parse(req.url, true);
+    let q = p.query;        
+    if('parentFolder' in q){
+        rel_parent_folder = q.parentFolder;
+    }
+    else{
+        error(req, res, 'Parent folder not specified')
+    }
+
+    if('forDeleteFile' in q){
+        forDeleteFile = q.forDeleteFile;
+    }
+    else{
+        error(req, res, 'For delete file not specified')
+    }
+
+    let finalPath = start_path + rel_parent_folder + path.sep + forDeleteFile;
+    
+
+    let redirectURL = (isHTTPs(req) ? 'https' : 'http')
+        + '://'
+        + req.headers.host 
+        + `/ls?path=${rel_parent_folder}`;
+
+    try{    
+        if(fs.lstatSync(finalPath).isDirectory()){
+            fs.rmdirSync(finalPath, { recursive: true, force: true });
+        }
+        else if(fs.lstatSync(finalPath).isFile()){
+            fs.unlinkSync(finalPath);
+        }
+        else{
+            error(req, reep, 'Unhandled case.');
+        }
+
+        fs.rmdirSync();
+    } catch(e){
+        console.error(e);
+    }
+
+    res.writeHead(301, {
+        Location: `${redirectURL}`
+    }).end();
 }
+
