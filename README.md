@@ -1,5 +1,12 @@
 # Tiny File Manager
-A tiny web file manager made in pure NodeJs
+A tiny web file manager made in pure [NodeJs](https://nodejs.org/). It was inspired by
+a [PHP](https://php.net) version of a [tiny file manager](https://github.com/prasathmani/tinyfilemanager).
+
+Used a way to asses the difference between PHP and NodeJS on server side.
+
+## Requirements
+
+* NodeJs 18
 
 ## Install nodemon module
 ```bash
