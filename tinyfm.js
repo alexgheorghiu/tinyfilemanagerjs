@@ -3,9 +3,9 @@
  */
 
 /**
-cd 
-ls    
-mkdir
+cd [v]
+ls [v]   
+mkdir []
 rename
 upload 
 delete  
@@ -18,6 +18,7 @@ TODO: limit navigation only to the initial folder (no escape through ..)
 // import os from 'node:os';
 
 // const start_path = __dirname;
+const PORT = 8080;
 const start_path = '/home/alex/temp';
 // let currentPath = null;
 
@@ -38,7 +39,7 @@ const getDirectories = source =>
     fs.readdirSync(source, {withFileTypes: true})
     .filter(direntry => direntry.isDirectory())
     .map(direntry => direntry.name)
-    .sort((a,b) => -a.localeCompare(b));
+    .sort((a,b) => a.localeCompare(b));
 
 const getFiles = source => 
     fs.readdirSync(source, {withFileTypes: true})
@@ -54,6 +55,9 @@ const getParent = (filename, onlyName = false)=>{
     }
 }
 
+//@see https://stackoverflow.com/questions/10348906/how-to-know-if-a-request-is-http-or-https-in-node-js
+const isHTTPs = (req) => 'encrypted' in req.connection
+
 
 http.createServer(function (req, res) {
     console.log('URL is:' + req.url)
@@ -68,6 +72,9 @@ http.createServer(function (req, res) {
     else if(q.pathname == '/ls'){
         ls(req, res);
     }
+    else if(q.pathname == '/mkdir'){
+        mkdir(req, res);
+    }
     else if(extension in mime_map){
         download_file(req, res);
     }
@@ -80,13 +87,18 @@ http.createServer(function (req, res) {
     //var txt = q.year + " " + q.month;
     // res.end(txt);
     //res.end();
-}).listen(8080);
+}).listen(PORT);
 
 
 function welcome(req, res){
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write('<h1>Welcome</h1>')
     res.write('This is a tiny web interface into a folder');
+    res.write('<ul>');
+    res.write(`<li><a href="/ls">File Manager</a></li>`);
+    res.write(`<li><a href="/info">Info</a></li>`);
+    res.write('</ul>');
+    
 
     res.end();
 }
@@ -121,10 +133,13 @@ function download_file(req, resp){
 function info(req, res){
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write('<h1>Info</h1>')
+
+    const { version } = require('node:process');
+
     let info = {};
     info['os'] = os.platform();
     info['no. CPUs '] = os.cpus().length
-    info['altele'] = 'ce?'
+    info['node version'] = version
 
     // res.write(typeof info);
     res.write('<ul>');
@@ -160,6 +175,16 @@ function ls(req, res){
 
     //display current path
     res.write(`<div>Current path: ${final_path}</div>`)
+    res.write(`<hr/>`)
+
+    //new folder
+    res.write(
+        `<form action='./mkdir'>
+                <input name="parentFolder" type="hidden" value="${rel_path}"/>
+                New Folder <input name="newFolder" type="text"/>
+                <input type="submit" value="Create"/>
+        </form>`
+    );
     res.write(`<hr/>`)
 
     //display directories    
@@ -200,5 +225,49 @@ function ls(req, res){
     res.write('<hr/>');
     res.write(`<div>${start_path}</div>`);
 
+    res.end();
+}
+
+function mkdir(req, res){
+    let rel_parent_folder = '';
+    let new_folder = '';
+    let p  = url.parse(req.url, true);
+    let q = p.query;        
+    if('parentFolder' in q){
+        rel_parent_folder = q.parentFolder;
+    }
+    else{
+        error(req, res, 'Parent folder not specified')
+    }
+
+    if('newFolder' in q){
+        new_folder = q.newFolder;
+    }
+    else{
+        error(req, res, 'New folder not specified')
+    }
+
+    let finalPath = start_path + rel_parent_folder + path.sep + new_folder;
+    
+
+    let redirectURL = (isHTTPs(req) ? 'https' : 'http')
+        + '://'
+        + req.headers.host 
+        + `/ls?path=${rel_parent_folder}`;
+
+    try{    
+        fs.mkdirSync(finalPath);
+    } catch(e){
+        console.error(e);
+    }
+
+    res.writeHead(301, {
+        Location: `${redirectURL}`
+    }).end();
+}
+
+function error(req, res, mesg){
+    res.writeHead(400, { 'Content-Type': 'text/html' });
+    res.write(`${mesg}`);
     res.end();
 }
