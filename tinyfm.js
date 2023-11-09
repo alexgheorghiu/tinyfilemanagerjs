@@ -5,14 +5,14 @@
 /**
 cd [v]
 ls [v]   
-mkdir []
+mkdir [v]
 rename
 upload 
 delete  
 */
 
 /*
-TODO: limit navigation only to the initial folder (no escape through ..)
+TODO: 
 */
 
 // import os from 'node:os';
@@ -188,7 +188,13 @@ function ls(req, res){
     res.write(`<hr/>`)
 
     //display directories    
-    let dirs  = getDirectories(final_path);
+    let dirs  = []
+    try {
+        dirs = getDirectories(final_path);
+    } catch(e){
+        console.error(e)
+    }
+
     dirs.unshift('..');
     for(const dir in dirs){  
         let new_rel_path;
@@ -213,7 +219,12 @@ function ls(req, res){
     }
 
     //display files
-    let files  = getFiles(final_path);
+    let files  = [];
+    try {
+        files = getFiles(final_path);
+    } catch (error) {
+        console.error(error)
+    }
     for(const file in files){
         res.write('<div class="file_line">');
         res.write('<img src="./file.png">');
