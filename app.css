@@ -1,0 +1,30 @@
+.folder_line {
+    margin-top: 5px;
+    vertical-align: middle;
+}
+
+.folder {
+    /* background-color: lightgreen; */
+    /* padding: 2px;     */
+    font-weight: bold;
+}
+
+.folder_line > img {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+.file_line {
+    margin-top: 5px;
+    vertical-align: middle;
+}
+
+.file {
+
+}
+
+.file_line > img {
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
