@@ -203,11 +203,13 @@ function ls(req, res){
         console.error(e)
     }
 
+    let  parentPath = getParent(final_path);
+
     dirs.unshift('..');
     for(const dir in dirs){  
-        let new_rel_path;
-        if(dirs[dir] == '..'){
-            let  parentPath = getParent(final_path);
+        let new_rel_path; //relative path to 'root' folder
+
+        if(dirs[dir] == '..'){            
             new_rel_path = parentPath.substring(start_path.length);
         }
         else{
@@ -223,9 +225,10 @@ function ls(req, res){
         res.write('<span class="folder">'             
             + `<a href="${visit_link}">` + dirs[dir] + '</a>'
             + '</span>');
-        res.write('<span class="delete">'             
-            + `<a href="${delete_link}"> [delete]</a>`
-            + '</span>');
+        res.write(`<a href="${delete_link}">`
+            + '<img src="./delete.png" />'
+            + `</a>`
+            );
         res.write('</div>');
     }
 
@@ -237,9 +240,16 @@ function ls(req, res){
         console.error(error)
     }
     for(const file in files){
+        new_rel_path = parentPath.substring(start_path.length);
+        let delete_file_link =  `/rm?parentFolder=${rel_path}&forDeleteFile=${encodeURIComponent(files[file])}`;
+
         res.write('<div class="file_line">');
         res.write('<img src="./file.png">');
-        res.write('<span class="file">' + files[file] + '</span');
+        res.write('<span class="file">' + files[file] + '</span>');
+        res.write(`<a href="${delete_file_link}">`
+            + '<img src="./delete.png" />'
+            + `</a>`
+            );
         res.write('</div>');
     }
 
